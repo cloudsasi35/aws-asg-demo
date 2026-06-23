@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cloud Autoscaling & Loadbalancer Demo - <%= instance.instanceId %></title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --accent: #38bdf8;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --hot: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 2rem;
+      background: linear-gradient(90deg, #0c4a6e, #1e3a8a);
+      border-bottom: 1px solid #334155;
+    }
+    header h1 { margin: 0; font-size: 1.4rem; }
+    header p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    main { max-width: 980px; margin: 0 auto; padding: 1.5rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+    }
+    .card .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+    .card .value {
+      font-size: 1.05rem;
+      font-weight: 600;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      word-break: break-all;
+    }
+    .cpu-bar {
+      height: 10px;
+      border-radius: 5px;
+      background: #0b1220;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .cpu-bar > div {
+      height: 100%;
+      width: 0%;
+      background: var(--ok);
+      transition: width 0.5s ease, background 0.5s ease;
+    }
+    .actions {
+      background: var(--panel);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .actions h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    button {
+      flex: 1 1 180px;
+      padding: 0.85rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      color: white;
+      transition: transform 0.05s ease, opacity 0.2s;
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-small  { background: #16a34a; }
+    .btn-medium { background: #d97706; }
+    .btn-heavy  { background: #dc2626; }
+    .btn-reset  { background: #475569; flex: 1 1 100%; }
+    .btn-reset:hover { background: #334155; }
+    .jobs {
+      background: var(--panel);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+    }
+    .jobs h2 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+    .jobs ul { list-style: none; padding: 0; margin: 0; }
+    .jobs li {
+      padding: 0.5rem 0;
+      border-bottom: 1px dashed #334155;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.9rem;
+    }
+    .jobs li:last-child { border-bottom: none; }
+    .empty { color: var(--muted); font-style: italic; }
+    footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 1rem; }
+    .toast {
+      position: fixed; bottom: 1rem; right: 1rem;
+      background: #1e293b; border: 1px solid var(--accent);
+      padding: 0.75rem 1rem; border-radius: 6px;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Cloud Autoscaling &amp; Loadbalancer Demo</h1>
+    <p>Generate CPU load to trigger scaling policies. Auto-refreshing every 2s.</p>
+  </header>
+
+  <main>
+    <div class="grid">
+      <div class="card">
+        <div class="label">Hostname</div>
+        <div class="value" id="hostname"><%= hostname %></div>
+      </div>
+      <div class="card">
+        <div class="label">Instance ID</div>
+        <div class="value" id="instanceId"><%= instance.instanceId %></div>
+      </div>
+      <div class="card">
+        <div class="label">Private IP</div>
+        <div class="value" id="privateIp"><%= instance.privateIp %></div>
+      </div>
+      <div class="card">
+        <div class="label">Availability Zone</div>
+        <div class="value" id="az"><%= instance.availabilityZone %></div>
+      </div>
+      <div class="card">
+        <div class="label">CPU Usage (<span id="cores"><%= cpuCores %></span> cores)</div>
+        <div class="value"><span id="cpu"><%= cpuUsagePercent %></span>%</div>
+        <div class="cpu-bar"><div id="cpuBar"></div></div>
+      </div>
+      <div class="card">
+        <div class="label">Server Time</div>
+        <div class="value" id="serverTime"><%= serverTime %></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <h2>Generate CPU Load</h2>
+      <div class="btn-row">
+        <button class="btn-small"  data-size="small">Small Load (30s)</button>
+        <button class="btn-medium" data-size="medium">Medium Load (60s)</button>
+        <button class="btn-heavy"  data-size="heavy">Heavy Load (120s)</button>
+      </div>
+      <div class="btn-row" style="margin-top: 0.75rem;">
+        <button class="btn-reset" id="resetBtn">Reset / Stop All Loads</button>
+      </div>
+    </div>
+
+    <div class="jobs">
+      <h2>Active Load Jobs</h2>
+      <ul id="jobsList">
+        <% if (activeJobs.length === 0) { %>
+          <li class="empty">No active jobs</li>
+        <% } else { %>
+          <% activeJobs.forEach(function(j){ %>
+            <li><%= j.id %> &middot; <%= j.label %> &middot; <%= j.remainingSec %>s remaining &middot; <%= j.workers %> workers</li>
+          <% }) %>
+        <% } %>
+      </ul>
+    </div>
+  </main>
+
+  <footer>aws-asg-demo &middot; Node <%= process.version || '' %></footer>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const toast = (msg) => {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(t._h);
+      t._h = setTimeout(() => t.classList.remove('show'), 2500);
+    };
+
+    function paintCpu(pct) {
+      $('cpu').textContent = pct;
+      const bar = $('cpuBar');
+      bar.style.width = Math.min(100, pct) + '%';
+      bar.style.background = pct > 80 ? 'var(--hot)' : pct > 50 ? 'var(--warn)' : 'var(--ok)';
+    }
+
+    async function refresh() {
+      try {
+        const r = await fetch('/api/info', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        $('hostname').textContent   = d.hostname;
+        $('instanceId').textContent = d.instanceId;
+        $('privateIp').textContent  = d.privateIp;
+        $('az').textContent         = d.availabilityZone;
+        $('cores').textContent      = d.cpuCores;
+        $('serverTime').textContent = d.serverTime;
+        paintCpu(d.cpuUsagePercent);
+
+        const ul = $('jobsList');
+        if (!d.activeJobs.length) {
+          ul.innerHTML = '<li class="empty">No active jobs</li>';
+        } else {
+          ul.innerHTML = d.activeJobs.map(j =>
+            `<li>${j.id} &middot; ${j.label} &middot; ${j.remainingSec}s remaining &middot; ${j.workers} workers</li>`
+          ).join('');
+        }
+      } catch (_) { /* ignore transient errors */ }
+    }
+
+    document.querySelectorAll('button[data-size]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const size = btn.dataset.size;
+        btn.disabled = true;
+        try {
+          const r = await fetch('/api/load/' + size, { method: 'POST' });
+          const d = await r.json();
+          if (r.ok) toast(`Started ${d.job.label} (${d.job.durationSec}s) - ${d.job.id}`);
+          else toast('Error: ' + (d.error || r.status));
+        } catch (e) {
+          toast('Request failed: ' + e.message);
+        } finally {
+          setTimeout(() => (btn.disabled = false), 1000);
+          refresh();
+        }
+      });
+    });
+
+    $('resetBtn').addEventListener('click', async () => {
+      const btn = $('resetBtn');
+      btn.disabled = true;
+      try {
+        const r = await fetch('/api/reset', { method: 'POST' });
+        const d = await r.json();
+        if (r.ok) toast(`Reset: stopped ${d.workers} worker(s) across ${d.jobs} job(s)`);
+        else toast('Error: ' + (d.error || r.status));
+      } catch (e) {
+        toast('Request failed: ' + e.message);
+      } finally {
+        setTimeout(() => (btn.disabled = false), 500);
+        refresh();
+      }
+    });
+
+    paintCpu(<%= cpuUsagePercent %>);
+    setInterval(refresh, 2000);
+  </script>
+</body>
+</html>
