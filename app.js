@@ -120,9 +120,7 @@ const activeJobs = new Map(); // id -> { size, startedAt, endsAt, workers: [] }
 let jobCounter = 0;
 
 const LOAD_PRESETS = {
-  small: { label: 'Small Load', durationSec: 30 },
-  medium: { label: 'Medium Load', durationSec: 60 },
-  heavy: { label: 'Heavy Load', durationSec: 120 },
+  long: { label: 'Load (15m)', durationSec: 15 * 60 },
 };
 
 function startLoad(size) {

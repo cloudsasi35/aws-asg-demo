@@ -91,9 +91,7 @@
     }
     button:active { transform: translateY(1px); }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-small  { background: #16a34a; }
-    .btn-medium { background: #d97706; }
-    .btn-heavy  { background: #dc2626; }
+    .btn-load   { background: #dc2626; }
     .btn-reset  { background: #475569; flex: 1 1 100%; }
     .btn-reset:hover { background: #334155; }
     .jobs {
@@ -160,9 +158,7 @@
     <div class="actions">
       <h2>Generate CPU Load</h2>
       <div class="btn-row">
-        <button class="btn-small"  data-size="small">Small Load (30s)</button>
-        <button class="btn-medium" data-size="medium">Medium Load (60s)</button>
-        <button class="btn-heavy"  data-size="heavy">Heavy Load (120s)</button>
+        <button class="btn-load" data-size="long">Start Load (15m)</button>
       </div>
       <div class="btn-row" style="margin-top: 0.75rem;">
         <button class="btn-reset" id="resetBtn">Reset / Stop All Loads</button>
