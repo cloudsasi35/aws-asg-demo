@@ -150,3 +150,13 @@ The same [userdata.sh](userdata.sh) works unchanged in a **Launch Template**.
 ## License
 
 MIT
+
+## When Code Changes
+
+apply this below command in vm
+
+ssh ec2-user@server
+cd /opt/aws-autoscaling-demo
+git pull
+pkill node
+nohup node app.js > app.log 2>&1 &
