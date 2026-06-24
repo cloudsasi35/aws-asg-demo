@@ -155,8 +155,10 @@ MIT
 
 apply this below command in vm
 
+```bash
 ssh ec2-user@server
 cd /opt/aws-autoscaling-demo
 git pull
 pkill node
 nohup node app.js > app.log 2>&1 &
+```
